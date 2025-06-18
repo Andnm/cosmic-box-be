@@ -1,0 +1,213 @@
+const Letter = require('../models/Letter');
+const User = require('../models/User');
+const Payment = require('../models/Payment');
+const Notification = require('../models/Notification');
+const { createNotification } = require('../services/notificationService');
+
+const getPendingLetters = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const letters = await Letter.find({
+      adminReviewStatus: 'pending'
+    })
+      .populate('senderId', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Letter.countDocuments({ adminReviewStatus: 'pending' });
+
+    res.json({
+      letters,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const reviewLetter = async (req, res) => {
+  try {
+    const { letterId } = req.params;
+    const { status, note } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Status must be approved or rejected' });
+    }
+
+    const letter = await Letter.findById(letterId).populate('senderId');
+    if (!letter) {
+      return res.status(404).json({ error: 'Letter not found' });
+    }
+
+    if (letter.adminReviewStatus !== 'pending') {
+      return res.status(400).json({ error: 'Letter has already been reviewed' });
+    }
+
+    letter.adminReviewStatus = status;
+    letter.adminReviewedAt = new Date();
+    letter.adminReviewNote = note;
+
+    if (status === 'approved') {
+      const activeUsers = await User.find({
+        isActive: true,
+        roleName: 'user',
+        _id: { $ne: letter.senderId }
+      });
+
+      if (activeUsers.length > 0) {
+        const randomReceiver = activeUsers[Math.floor(Math.random() * activeUsers.length)];
+        letter.receiverId = randomReceiver._id;
+        letter.status = 'sent';
+        letter.sentAt = new Date();
+
+        await createNotification({
+          userId: randomReceiver._id,
+          type: 'new_letter',
+          title: 'You have received a new letter!',
+          content: 'Someone has sent you an anonymous letter',
+          relatedId: letter._id,
+          relatedType: 'letter'
+        });
+      }
+
+      await createNotification({
+        userId: letter.senderId,
+        type: 'letter_approved',
+        title: 'Your letter has been approved',
+        content: 'Your letter has been approved and sent to a random user',
+        relatedId: letter._id,
+        relatedType: 'letter'
+      });
+    } else {
+      await createNotification({
+        userId: letter.senderId,
+        type: 'letter_rejected',
+        title: 'Your letter has been rejected',
+        content: note || 'Your letter was rejected by admin',
+        relatedId: letter._id,
+        relatedType: 'letter'
+      });
+    }
+
+    await letter.save();
+
+    res.json({
+      message: `Letter ${status} successfully`,
+      letter
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getAllLetters = async (req, res) => {
+  try {
+    const { status, adminReviewStatus, page = 1, limit = 10 } = req.query;
+    const query = {};
+
+    if (status) query.status = status;
+    if (adminReviewStatus) query.adminReviewStatus = adminReviewStatus;
+
+    const letters = await Letter.find(query)
+      .populate('senderId', 'username email')
+      .populate('receiverId', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Letter.countDocuments(query);
+
+    res.json({
+      letters,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getPayments = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    const query = {};
+
+    if (status) query.status = status;
+
+    const payments = await Payment.find(query)
+      .populate('userId', 'username email')
+      .populate('requestId')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Payment.countDocuments(query);
+
+    res.json({
+      payments,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getDashboardStats = async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      totalLetters,
+      pendingLetters,
+      approvedLetters,
+      rejectedLetters,
+      totalPayments,
+      completedPayments,
+      pendingPayments
+    ] = await Promise.all([
+      User.countDocuments({ roleName: 'user', isActive: true }),
+      Letter.countDocuments(),
+      Letter.countDocuments({ adminReviewStatus: 'pending' }),
+      Letter.countDocuments({ adminReviewStatus: 'approved' }),
+      Letter.countDocuments({ adminReviewStatus: 'rejected' }),
+      Payment.countDocuments(),
+      Payment.countDocuments({ status: 'completed' }),
+      Payment.countDocuments({ status: 'pending' })
+    ]);
+
+    const totalRevenue = await Payment.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    res.json({
+      stats: {
+        totalUsers,
+        totalLetters,
+        pendingLetters,
+        approvedLetters,
+        rejectedLetters,
+        totalPayments,
+        completedPayments,
+        pendingPayments,
+        totalRevenue: totalRevenue[0]?.total || 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = {
+  getPendingLetters,
+  reviewLetter,
+  getAllLetters,
+  getPayments,
+  getDashboardStats
+};
