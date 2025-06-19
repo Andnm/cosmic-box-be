@@ -21,7 +21,7 @@ const getPendingLetters = async (req, res) => {
     res.json({
       letters,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       total
     });
   } catch (error) {
@@ -124,7 +124,7 @@ const getAllLetters = async (req, res) => {
     res.json({
       letters,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       total
     });
   } catch (error) {
@@ -151,7 +151,47 @@ const getPayments = async (req, res) => {
     res.json({
       payments,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getAllUsers = async (req, res) => {
+  try {
+    const { roleName, isActive, search, page = 1, limit = 10 } = req.query;
+    const query = {};
+
+    // Filter by role
+    if (roleName) query.roleName = roleName;
+
+    // Filter by active status
+    if (isActive !== undefined && isActive !== '') {
+      query.isActive = isActive === 'true';
+    }
+
+    // Search by username or email
+    if (search) {
+      query.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const users = await User.find(query)
+      .select('-password') // Exclude password field
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await User.countDocuments(query);
+
+    res.json({
+      users,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
       total
     });
   } catch (error) {
@@ -209,5 +249,6 @@ module.exports = {
   reviewLetter,
   getAllLetters,
   getPayments,
+  getAllUsers,
   getDashboardStats
 };

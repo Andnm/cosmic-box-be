@@ -6,6 +6,7 @@ const {
   reviewLetter,
   getAllLetters,
   getPayments,
+  getAllUsers,
   getDashboardStats
 } = require('../controllers/adminController');
 
@@ -13,7 +14,7 @@ const {
  * @swagger
  * /api/admin/dashboard:
  *   get:
- *     summary: Get admin dashboard statistics
+ *     summary: Get dashboard statistics
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -60,7 +61,7 @@ router.get('/letters/pending', authenticateToken, requireAdmin, getPendingLetter
  * @swagger
  * /api/admin/letters:
  *   get:
- *     summary: Get all letters
+ *     summary: Get all letters with filters
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -99,7 +100,7 @@ router.get('/letters', authenticateToken, requireAdmin, getAllLetters);
  * @swagger
  * /api/admin/letters/{letterId}/review:
  *   put:
- *     summary: Review a letter
+ *     summary: Review a letter (approve/reject)
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -123,7 +124,6 @@ router.get('/letters', authenticateToken, requireAdmin, getAllLetters);
  *                 enum: [approved, rejected]
  *               note:
  *                 type: string
- *                 maxLength: 500
  *     responses:
  *       200:
  *         description: Letter reviewed successfully
@@ -171,5 +171,49 @@ router.put('/letters/:letterId/review', authenticateToken, requireAdmin, reviewL
  *         description: Admin access required
  */
 router.get('/payments', authenticateToken, requireAdmin, getPayments);
+
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Get all users with filters
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: roleName
+ *         schema:
+ *           type: string
+ *           enum: [admin, user]
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: string
+ *           enum: [true, false]
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by username or email
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ */
+router.get('/users', authenticateToken, requireAdmin, getAllUsers);
 
 module.exports = router;
