@@ -1,14 +1,14 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { authenticateToken, requireUser } = require('../middleware/auth');
-const { validateLetter } = require('../middleware/validation');
+const { authenticateToken, requireUser } = require("../middleware/auth");
+const { validateLetter } = require("../middleware/validation");
 const {
   createLetter,
   getMyLetters,
   getReceivedLetters,
   archiveLetter,
-  deleteDraftLetter
-} = require('../controllers/letterController');
+  deleteDraftLetter,
+} = require("../controllers/letterController");
 
 /**
  * @swagger
@@ -64,6 +64,10 @@ const {
  *               content:
  *                 type: string
  *                 maxLength: 5000
+ *               status:
+ *                 type: string
+ *                 enum: [draft, sent, archived]
+ *                 description: Letter status (defaults to 'draft' if not provided)
  *     responses:
  *       201:
  *         description: Letter created successfully
@@ -72,7 +76,7 @@ const {
  *       401:
  *         description: Unauthorized
  */
-router.post('/', authenticateToken, requireUser, validateLetter, createLetter);
+router.post("/", authenticateToken, requireUser, validateLetter, createLetter);
 
 /**
  * @swagger
@@ -104,7 +108,7 @@ router.post('/', authenticateToken, requireUser, validateLetter, createLetter);
  *       401:
  *         description: Unauthorized
  */
-router.get('/my', authenticateToken, requireUser, getMyLetters);
+router.get("/my", authenticateToken, requireUser, getMyLetters);
 
 /**
  * @swagger
@@ -131,7 +135,7 @@ router.get('/my', authenticateToken, requireUser, getMyLetters);
  *       401:
  *         description: Unauthorized
  */
-router.get('/received', authenticateToken, requireUser, getReceivedLetters);
+router.get("/received", authenticateToken, requireUser, getReceivedLetters);
 
 /**
  * @swagger
@@ -155,7 +159,7 @@ router.get('/received', authenticateToken, requireUser, getReceivedLetters);
  *       401:
  *         description: Unauthorized
  */
-router.put('/:letterId/archive', authenticateToken, requireUser, archiveLetter);
+router.put("/:letterId/archive", authenticateToken, requireUser, archiveLetter);
 
 /**
  * @swagger
@@ -179,6 +183,6 @@ router.put('/:letterId/archive', authenticateToken, requireUser, archiveLetter);
  *       401:
  *         description: Unauthorized
  */
-router.delete('/:letterId', authenticateToken, requireUser, deleteDraftLetter);
+router.delete("/:letterId", authenticateToken, requireUser, deleteDraftLetter);
 
 module.exports = router;
