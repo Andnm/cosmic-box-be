@@ -117,8 +117,8 @@ const handlePayOSWebhook = async (req, res) => {
         await createNotification({
           userId: connectionRequest.receiverId._id,
           type: "connection_request",
-          title: "New Connection Request",
-          content: `${connectionRequest.senderId.username} sent you a connection request`,
+          title: "Yêu cầu kết nối mới",
+          content: `${connectionRequest.senderId.username} đã gửi cho bạn một yêu cầu kết nối`,
           relatedId: connectionRequest._id,
           relatedType: "connection_request",
         });

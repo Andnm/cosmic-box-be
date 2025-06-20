@@ -10,7 +10,7 @@ const createLetter = async (req, res) => {
     const letter = new Letter({
       senderId: req.user._id,
       content,
-      status: status || "draft", 
+      status: status || "draft",
     });
 
     await letter.save();
@@ -19,8 +19,8 @@ const createLetter = async (req, res) => {
       {
         userId: null,
         type: "new_letter",
-        title: "New Letter Submitted for Review",
-        content: `A new letter has been submitted by ${req.user.username}`,
+        title: "Lá thư mới được gửi để duyệt",
+        content: `Một lá thư mới đã được gửi bởi ${req.user.username}`,
         relatedId: letter._id,
         relatedType: "letter",
       },

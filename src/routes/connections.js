@@ -1,13 +1,13 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { authenticateToken, requireUser } = require('../middleware/auth');
-const { validateConnectionRequest } = require('../middleware/validation');
+const { authenticateToken, requireUser } = require("../middleware/auth");
+const { validateConnectionRequest } = require("../middleware/validation");
 const {
   getUsers,
   createConnectionRequest,
   getMyConnectionRequests,
-  respondToConnectionRequest
-} = require('../controllers/connectionController');
+  respondToConnectionRequest,
+} = require("../controllers/connectionController");
 
 /**
  * @swagger
@@ -65,7 +65,7 @@ const {
  *       401:
  *         description: Unauthorized
  */
-router.get('/users', authenticateToken, requireUser, getUsers);
+router.get("/users", authenticateToken, requireUser, getUsers);
 
 /**
  * @swagger
@@ -99,7 +99,13 @@ router.get('/users', authenticateToken, requireUser, getUsers);
  *       401:
  *         description: Unauthorized
  */
-router.post('/requests', authenticateToken, requireUser, validateConnectionRequest, createConnectionRequest);
+router.post(
+  "/requests",
+  authenticateToken,
+  requireUser,
+  validateConnectionRequest,
+  createConnectionRequest
+);
 
 /**
  * @swagger
@@ -132,7 +138,12 @@ router.post('/requests', authenticateToken, requireUser, validateConnectionReque
  *       401:
  *         description: Unauthorized
  */
-router.get('/requests', authenticateToken, requireUser, getMyConnectionRequests);
+router.get(
+  "/requests",
+  authenticateToken,
+  requireUser,
+  getMyConnectionRequests
+);
 
 /**
  * @swagger
@@ -160,16 +171,25 @@ router.get('/requests', authenticateToken, requireUser, getMyConnectionRequests)
  *               status:
  *                 type: string
  *                 enum: [accepted, rejected]
+ *               rejectionReason:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: Required when status is rejected
  *     responses:
  *       200:
  *         description: Connection request responded successfully
  *       400:
- *         description: Invalid status
+ *         description: Invalid status or missing rejection reason
  *       404:
  *         description: Connection request not found or not paid
  *       401:
  *         description: Unauthorized
  */
-router.put('/requests/:requestId/respond', authenticateToken, requireUser, respondToConnectionRequest);
+router.put(
+  "/requests/:requestId/respond",
+  authenticateToken,
+  requireUser,
+  respondToConnectionRequest
+);
 
 module.exports = router;
