@@ -9,14 +9,22 @@ const getMyConversations = async (req, res) => {
       isActive: true,
     })
       .populate("participants.userId", "username email")
-      .populate("requestId")
+      .populate({
+        path: "requestId",
+        populate: {
+          path: "senderId receiverId",
+          select: "username email",
+        },
+      })
       .sort({ updatedAt: -1 });
 
     const conversationsWithLastMessage = await Promise.all(
       conversations.map(async (conv) => {
         const lastMessage = await Message.findOne({
           conversationId: conv._id,
-        }).sort({ createdAt: -1 });
+        })
+          .populate("senderId", "username email")
+          .sort({ createdAt: -1 });
 
         return {
           ...conv.toObject(),
