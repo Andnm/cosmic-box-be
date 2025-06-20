@@ -22,7 +22,7 @@ const connectionRequestSchema = new mongoose.Schema({
   },
   feeAmount: {
     type: Number,
-    default: 50000
+    default: 20000
   },
   isPaid: {
     type: Boolean,

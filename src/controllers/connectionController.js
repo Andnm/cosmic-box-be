@@ -66,7 +66,7 @@ const createConnectionRequest = async (req, res) => {
       senderId: req.user._id,
       receiverId,
       message,
-      feeAmount: 50000
+      feeAmount: 20000
     });
 
     await connectionRequest.save();
@@ -75,7 +75,7 @@ const createConnectionRequest = async (req, res) => {
       requestId: connectionRequest._id,
       userId: req.user._id,
       amount: connectionRequest.feeAmount,
-      description: `Connection request to ${receiver.username}`
+      description: `Ket noi`
     });
 
     res.status(201).json({
