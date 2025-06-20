@@ -33,8 +33,6 @@ const handlePayOSWebhook = async (req, res) => {
 
     const webhookData = req.body;
 
-    console.log("webhookData: ", webhookData);
-
     // Xử lý request test từ PayOS (không có data thực tế)
     // if (
     //   !webhookData ||
@@ -65,7 +63,7 @@ const handlePayOSWebhook = async (req, res) => {
     //   return res.status(400).json({ error: 'Invalid webhook signature' });
     // }
 
-    const { orderCode, status } = webhookData;
+    const { orderCode, status } = webhookData.data;
     console.log(`💳 Processing payment: ${orderCode}, status: ${status}`);
 
     // Tìm payment trong database
@@ -133,7 +131,7 @@ const handlePayOSWebhook = async (req, res) => {
       }
     }
     // Xử lý payment bị hủy
-    else if (status === "CANCELLED" || status === "PAYMENT_CANCELLED") {
+    else if (status === "CANCELLED" || status === "PAYMENT_CANCELLED" || status === "failed") {
       payment.status = "failed";
       await payment.save();
       console.log(`❌ Payment marked as failed: ${payment._id}`);
