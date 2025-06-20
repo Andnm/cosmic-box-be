@@ -118,4 +118,23 @@ router.get('/request/:requestId/status', authenticateToken, requireUser, getPaym
  */
 router.post('/webhook/payos', handlePayOSWebhook);
 
+/**
+ * @swagger
+ * /api/payments/webhook/payos:
+ *   get:
+ *     summary: PayOS webhook handler
+ *     tags: [Payments]    
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *       400:
+ *         description: Invalid webhook signature
+ *       404:
+ *         description: Payment not found
+ */
+router.get('/webhook/payos', (req, res) => {
+  res.status(200).json({ message: 'PayOS webhook endpoint is working' });
+});
+
+
 module.exports = router;

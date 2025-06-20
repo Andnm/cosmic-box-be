@@ -41,6 +41,11 @@ const createPaymentLink = async ({ requestId, userId, amount, description }) => 
 
 const verifyPayOSWebhook = (webhookData) => {
   try {
+    // Nếu không có data hoặc signature, có thể là request test
+    if (!webhookData || !webhookData.data || !webhookData.signature) {
+      return false;
+    }
+
     const { signature, data } = webhookData;
     
     const sortedData = Object.keys(data)
