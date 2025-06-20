@@ -10,13 +10,17 @@ const getPendingLetters = async (req, res) => {
 
     const letters = await Letter.find({
       adminReviewStatus: "pending",
+      status: "sent",
     })
       .populate("senderId", "username email")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const total = await Letter.countDocuments({ adminReviewStatus: "pending" });
+    const total = await Letter.countDocuments({
+      adminReviewStatus: "pending",
+      status: "sent", 
+    });
 
     res.json({
       letters,
