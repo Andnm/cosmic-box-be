@@ -66,7 +66,7 @@ const handlePayOSWebhook = async (req, res) => {
       console.log(`✅ Payment marked as completed: ${payment._id}`);
 
       // Kiểm tra loại thanh toán
-      if (payment.description === "Goi vip") {
+      if (payment.description.includes("Goi vip")) {
         // Xử lý nâng cấp VIP
         const user = await User.findById(payment.userId);
         if (user) {
