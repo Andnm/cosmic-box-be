@@ -2,6 +2,7 @@ const Payment = require("../models/Payment");
 const ConnectionRequest = require("../models/ConnectionRequest");
 const { verifyPayOSWebhook } = require("../services/paymentService");
 const { createNotification } = require("../services/notificationService");
+const User = require("../models/User");
 
 const getPaymentStatus = async (req, res) => {
   try {
@@ -32,38 +33,6 @@ const handlePayOSWebhook = async (req, res) => {
     console.log("========================");
 
     const webhookData = req.body;
-
-    console.log("webhookData: ", webhookData);
-
-    // Xử lý request test từ PayOS (không có data thực tế)
-    // if (
-    //   !webhookData ||
-    //   Object.keys(webhookData).length === 0 ||
-    //   !webhookData.data ||
-    //   webhookData.test === true
-    // ) {
-    //   console.log("🧪 Test request from PayOS detected");
-    //   return res.status(200).json({
-    //     message: "Webhook endpoint is working",
-    //     status: "success",
-    //     timestamp: new Date().toISOString(),
-    //   });
-    // }
-
-    // Kiểm tra cấu trúc data
-    // if (!webhookData.data || !webhookData.data.orderCode) {
-    //   console.log("❌ Invalid webhook data structure");
-    //   return res.status(200).json({
-    //     message: "Invalid data structure but endpoint is working",
-    //     received: webhookData,
-    //   });
-    // }
-
-    // Verify signature (tạm thời skip để test, sau này bật lại)
-    // if (!verifyPayOSWebhook(webhookData)) {
-    //   console.log('❌ Invalid webhook signature');
-    //   return res.status(400).json({ error: 'Invalid webhook signature' });
-    // }
 
     const { orderCode, status } = webhookData.data;
     console.log(`💳 Processing payment: ${orderCode}, status: ${status}`);
@@ -96,41 +65,67 @@ const handlePayOSWebhook = async (req, res) => {
 
       console.log(`✅ Payment marked as completed: ${payment._id}`);
 
-      // Cập nhật connection request
-      const connectionRequest = await ConnectionRequest.findById(
-        payment.requestId
-      )
-        .populate("receiverId", "username")
-        .populate("senderId", "username");
+      // Kiểm tra loại thanh toán
+      if (payment.description === "Goi vip") {
+        // Xử lý nâng cấp VIP
+        const user = await User.findById(payment.userId);
+        if (user) {
+          user.upgradeToVip(); // Nâng cấp VIP
+          await user.save();
 
-      console.log("connectionRequest: ", connectionRequest);
+          console.log(`🌟 User upgraded to VIP: ${user._id}`);
 
-      if (connectionRequest) {
-        connectionRequest.isPaid = true;
-        await connectionRequest.save();
+          // Tạo notification cho user
+          await createNotification({
+            userId: user._id,
+            type: "vip_upgrade",
+            title: "Nâng cấp VIP thành công",
+            content: `Chúc mừng! Bạn đã nâng cấp thành công lên thành viên VIP.`,
+            relatedId: payment._id,
+            relatedType: "payment",
+          });
 
-        console.log(
-          `🔗 Connection request marked as paid: ${connectionRequest._id}`
-        );
-
-        // Tạo notification cho receiver
-        await createNotification({
-          userId: connectionRequest.receiverId._id,
-          type: "connection_request",
-          title: "Yêu cầu kết nối mới",
-          content: `${connectionRequest.senderId.username} đã gửi cho bạn một yêu cầu kết nối`,
-          relatedId: connectionRequest._id,
-          relatedType: "connection_request",
-        });
-
-        console.log(
-          `🔔 Notification sent to user: ${connectionRequest.receiverId._id}`
-        );
+          console.log(`🔔 VIP upgrade notification sent to user: ${user._id}`);
+        } else {
+          console.log("❌ User not found for VIP upgrade:", payment.userId);
+        }
       } else {
-        console.log(
-          "❌ Connection request not found for payment:",
+        // Xử lý connection request (logic cũ)
+        const connectionRequest = await ConnectionRequest.findById(
           payment.requestId
-        );
+        )
+          .populate("receiverId", "username")
+          .populate("senderId", "username");
+
+        console.log("connectionRequest: ", connectionRequest);
+
+        if (connectionRequest) {
+          connectionRequest.isPaid = true;
+          await connectionRequest.save();
+
+          console.log(
+            `🔗 Connection request marked as paid: ${connectionRequest._id}`
+          );
+
+          // Tạo notification cho receiver
+          await createNotification({
+            userId: connectionRequest.receiverId._id,
+            type: "connection_request",
+            title: "Yêu cầu kết nối mới",
+            content: `${connectionRequest.senderId.username} đã gửi cho bạn một yêu cầu kết nối`,
+            relatedId: connectionRequest._id,
+            relatedType: "connection_request",
+          });
+
+          console.log(
+            `🔔 Notification sent to user: ${connectionRequest.receiverId._id}`
+          );
+        } else {
+          console.log(
+            "❌ Connection request not found for payment:",
+            payment.requestId
+          );
+        }
       }
     }
     // Xử lý payment bị hủy

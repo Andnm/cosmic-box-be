@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  membership: {
+    type: String,
+    enum: ['basic', 'vip'],
+    default: 'basic'
   }
 }, {
   timestamps: true
@@ -42,6 +47,7 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
 userSchema.index({ roleName: 1 });
+userSchema.index({ membership: 1 });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
@@ -63,6 +69,11 @@ userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
   return userObject;
+};
+
+// Method to upgrade to VIP
+userSchema.methods.upgradeToVip = function() {
+  this.membership = 'vip';
 };
 
 module.exports = mongoose.model('User', userSchema);

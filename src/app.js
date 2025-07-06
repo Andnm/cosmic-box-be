@@ -20,6 +20,7 @@ const connectionRoutes = require("./routes/connections");
 const chatRoutes = require("./routes/chat");
 const notificationRoutes = require("./routes/notifications");
 const paymentRoutes = require("./routes/payments");
+const userRoutes = require("./routes/user");
 
 console.log("Loading environment variables...");
 console.log("NODE_ENV:", process.env.NODE_ENV);
@@ -97,6 +98,7 @@ app.use("/api/connections", connectionRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/users", userRoutes);
 
 app.use("*", (req, res) => {
   res.status(404).json({ error: "Route not found" });

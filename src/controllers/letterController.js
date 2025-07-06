@@ -6,6 +6,73 @@ const { createNotification } = require("../services/notificationService");
 const createLetter = async (req, res) => {
   try {
     const { content, status } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Kiểm tra giới hạn theo membership
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Kiểm tra giới hạn cho user basic
+    if (user.membership === "basic") {
+      // Kiểm tra giới hạn theo status
+      if (status === "sent") {
+        const todaySentLetters = await Letter.countDocuments({
+          senderId: req.user._id,
+          status: "sent",
+          createdAt: {
+            $gte: today,
+            $lt: tomorrow,
+          },
+        });
+
+        if (todaySentLetters >= 1) {
+          return res.status(400).json({
+            error: "Thành viên Basic chỉ được gửi 1 lá thư mỗi ngày",
+          });
+        }
+      }
+
+      if (status === "archived") {
+        const todayArchivedLetters = await Letter.countDocuments({
+          senderId: req.user._id,
+          status: "archived",
+          createdAt: {
+            $gte: today,
+            $lt: tomorrow,
+          },
+        });
+
+        if (todayArchivedLetters >= 3) {
+          return res.status(400).json({
+            error: "Thành viên Basic chỉ được lưu trữ 3 lá thư mỗi ngày",
+          });
+        }
+      }
+    } else if (user.membership === "vip") {
+      // Kiểm tra giới hạn cho VIP (10 thư mỗi ngày với status là sent)
+      if (status === "sent") {
+        const todayLetters = await Letter.countDocuments({
+          senderId: req.user._id,
+          status: "sent",
+          createdAt: {
+            $gte: today,
+            $lt: tomorrow,
+          },
+        });
+
+        if (todayLetters >= 10) {
+          return res.status(400).json({
+            error: "Thành viên VIP được gửi tối đa 10 lá thư mỗi ngày",
+          });
+        }
+      }
+    }
 
     const letter = new Letter({
       senderId: req.user._id,
@@ -15,20 +82,23 @@ const createLetter = async (req, res) => {
 
     await letter.save();
 
-    await createNotification(
-      {
-        userId: null,
-        type: "new_letter",
-        title: "Lá thư mới được gửi để duyệt",
-        content: `Một lá thư mới đã được gửi bởi ${req.user.username}`,
-        relatedId: letter._id,
-        relatedType: "letter",
-      },
-      "admin"
-    );
+    // Chỉ gửi notification cho admin khi status là 'sent' (cần review)
+    if (letter.status === "sent") {
+      await createNotification(
+        {
+          userId: null,
+          type: "new_letter",
+          title: "Lá thư mới được gửi để duyệt",
+          content: `Một lá thư mới đã được gửi bởi ${req.user.username}`,
+          relatedId: letter._id,
+          relatedType: "letter",
+        },
+        "admin"
+      );
+    }
 
     res.status(201).json({
-      message: "Letter created and submitted for review",
+      message: "Letter created successfully",
       letter,
     });
   } catch (error) {

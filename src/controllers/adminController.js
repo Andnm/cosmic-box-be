@@ -60,15 +60,45 @@ const reviewLetter = async (req, res) => {
     letter.adminReviewNote = note;
 
     if (status === "approved") {
-      const activeUsers = await User.find({
+      // Tìm danh sách user có thể nhận thư
+      let eligibleUsers = await User.find({
         isActive: true,
         roleName: "user",
         _id: { $ne: letter.senderId },
       });
 
-      if (activeUsers.length > 0) {
-        const randomReceiver =
-          activeUsers[Math.floor(Math.random() * activeUsers.length)];
+      // Lọc user basic đã nhận đủ thư trong ngày
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Kiểm tra từng user basic
+      const filteredUsers = [];
+      for (const user of eligibleUsers) {
+        if (user.membership === 'vip') {
+          // VIP không giới hạn
+          filteredUsers.push(user);
+        } else if (user.membership === 'basic') {
+          // Kiểm tra basic đã nhận bao nhiêu thư hôm nay
+          const todayReceivedCount = await Letter.countDocuments({
+            receiverId: user._id,
+            adminReviewStatus: 'approved',
+            adminReviewedAt: {
+              $gte: today,
+              $lt: tomorrow
+            }
+          });
+
+          if (todayReceivedCount < 1) {
+            // Basic chưa nhận đủ 1 thư hôm nay
+            filteredUsers.push(user);
+          }
+        }
+      }
+
+      if (filteredUsers.length > 0) {
+        const randomReceiver = filteredUsers[Math.floor(Math.random() * filteredUsers.length)];
         letter.receiverId = randomReceiver._id;
         letter.status = "sent";
         letter.sentAt = new Date();
@@ -81,14 +111,19 @@ const reviewLetter = async (req, res) => {
           relatedId: letter._id,
           relatedType: "letter",
         });
+      } else {
+        // Không có user nào có thể nhận thư
+        console.log("⚠️ No eligible users to receive letter:", letter._id);
+        // Letter vẫn được approve nhưng chưa có receiver
       }
 
       await createNotification({
         userId: letter.senderId,
         type: "letter_approved",
         title: "Lá thư của bạn đã được phê duyệt",
-        content:
-          "Lá thư của bạn đã được phê duyệt và gửi đến một người dùng ngẫu nhiên",
+        content: letter.receiverId 
+          ? "Lá thư của bạn đã được phê duyệt và gửi đến một người dùng ngẫu nhiên"
+          : "Lá thư của bạn đã được phê duyệt nhưng hiện tại chưa có người dùng phù hợp để nhận",
         relatedId: letter._id,
         relatedType: "letter",
       });
