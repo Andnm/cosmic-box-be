@@ -258,9 +258,9 @@ const getDashboardStats = async (req, res) => {
     ] = await Promise.all([
       User.countDocuments({ roleName: "user", isActive: true }),
       Letter.countDocuments(),
-      Letter.countDocuments({ adminReviewStatus: "pending" }),
-      Letter.countDocuments({ adminReviewStatus: "approved" }),
-      Letter.countDocuments({ adminReviewStatus: "rejected" }),
+      Letter.countDocuments({ adminReviewStatus: "pending", status: "sent" }),
+      Letter.countDocuments({ adminReviewStatus: "approved", status: "sent" }),
+      Letter.countDocuments({ adminReviewStatus: "rejected", status: "sent" }),
       Payment.countDocuments(),
       Payment.countDocuments({ status: "completed" }),
       Payment.countDocuments({ status: "pending" }),

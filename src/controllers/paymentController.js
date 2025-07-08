@@ -34,7 +34,7 @@ const handlePayOSWebhook = async (req, res) => {
 
     const webhookData = req.body;
 
-    const { orderCode, status } = webhookData.data;
+    const { orderCode, status, description } = webhookData.data;
     console.log(`💳 Processing payment: ${orderCode}, status: ${status}`);
 
     // Tìm payment trong database
@@ -66,7 +66,7 @@ const handlePayOSWebhook = async (req, res) => {
       console.log(`✅ Payment marked as completed: ${payment._id}`);
 
       // Kiểm tra loại thanh toán
-      if (payment.description.includes("Goi vip")) {
+      if (description.includes("Goi vip")) {
         // Xử lý nâng cấp VIP
         const user = await User.findById(payment.userId);
         if (user) {

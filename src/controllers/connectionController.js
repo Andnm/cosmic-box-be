@@ -61,9 +61,20 @@ const createConnectionRequest = async (req, res) => {
     });
 
     if (existingRequest) {
-      return res
-        .status(400)
-        .json({ error: "Connection request already exists" });
+      if (existingRequest.status === "pending") {
+        return res
+          .status(400)
+          .json({
+            error:
+              "Yêu cầu kết nối của bạn với người này đang đợi đối phương chấp thuận!",
+          });
+      }
+
+      if (existingRequest.status === "accepted") {
+        return res
+          .status(400)
+          .json({ error: "Hiện tại bạn đã kết nối với người này!" });
+      }
     }
 
     const connectionRequest = new ConnectionRequest({
@@ -140,11 +151,9 @@ const respondToConnectionRequest = async (req, res) => {
       status === "rejected" &&
       (!rejectionReason || rejectionReason.trim() === "")
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "Rejection reason is required when rejecting a request",
-        });
+      return res.status(400).json({
+        error: "Rejection reason is required when rejecting a request",
+      });
     }
 
     const connectionRequest = await ConnectionRequest.findOne({
