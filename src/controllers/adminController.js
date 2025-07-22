@@ -248,6 +248,7 @@ const getDashboardStats = async (req, res) => {
   try {
     const [
       totalUsers,
+      totalVipUsers,
       totalLetters,
       pendingLetters,
       approvedLetters,
@@ -257,6 +258,7 @@ const getDashboardStats = async (req, res) => {
       pendingPayments,
     ] = await Promise.all([
       User.countDocuments({ roleName: "user", isActive: true }),
+      User.countDocuments({ roleName: "user", isActive: true, membership: "vip" }),
       Letter.countDocuments(),
       Letter.countDocuments({ adminReviewStatus: "pending", status: "sent" }),
       Letter.countDocuments({ adminReviewStatus: "approved", status: "sent" }),
@@ -274,6 +276,7 @@ const getDashboardStats = async (req, res) => {
     res.json({
       stats: {
         totalUsers,
+        totalVipUsers,
         totalLetters,
         pendingLetters,
         approvedLetters,
