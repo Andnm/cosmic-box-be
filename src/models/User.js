@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['basic', 'vip'],
     default: 'basic'
+  },
+  ticket: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
@@ -48,6 +52,7 @@ userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
 userSchema.index({ roleName: 1 });
 userSchema.index({ membership: 1 });
+userSchema.index({ ticket: 1 });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
@@ -74,6 +79,11 @@ userSchema.methods.toJSON = function() {
 // Method to upgrade to VIP
 userSchema.methods.upgradeToVip = function() {
   this.membership = 'vip';
+};
+
+// Method to increment ticket
+userSchema.methods.incrementTicket = function() {
+  this.ticket += 1;
 };
 
 module.exports = mongoose.model('User', userSchema);

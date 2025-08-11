@@ -77,27 +77,51 @@ const createConnectionRequest = async (req, res) => {
       }
     }
 
+    const sender = await User.findById(req.user._id);
+    let feeAmount = 20000;
+    let paymentLink = "";
+    
+    if (sender.ticket > 0) {
+      feeAmount = 0;
+      
+      sender.ticket -= 1;
+      await sender.save();
+    }
+
     const connectionRequest = new ConnectionRequest({
       senderId: req.user._id,
       receiverId,
       message,
-      feeAmount: 20000,
+      feeAmount: feeAmount,
     });
 
     await connectionRequest.save();
 
-    const paymentLink = await createPaymentLink({
-      requestId: connectionRequest._id,
-      userId: req.user._id,
-      amount: connectionRequest.feeAmount,
-      description: `Ket noi`,
-    });
-
-    res.status(201).json({
-      message: "Connection request created. Please complete payment.",
-      connectionRequest,
-      paymentLink,
-    });
+    if (feeAmount > 0) {
+      paymentLink = await createPaymentLink({
+        requestId: connectionRequest._id,
+        userId: req.user._id,
+        amount: connectionRequest.feeAmount,
+        description: `Ket noi`,
+      });
+      
+      res.status(201).json({
+        message: "Connection request created. Please complete payment.",
+        connectionRequest,
+        paymentLink,
+      });
+    } else {
+      connectionRequest.isPaid = true;
+      await connectionRequest.save();
+      
+      res.status(201).json({
+        message: "Connection request created using ticket.",
+        connectionRequest,
+        paymentLink: "", 
+        ticketUsed: true,
+        remainingTickets: sender.ticket
+      });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -138,7 +162,7 @@ const getMyConnectionRequests = async (req, res) => {
 const respondToConnectionRequest = async (req, res) => {
   try {
     const { requestId } = req.params;
-    const { status, rejectionReason } = req.body; // ← Thêm rejectionReason
+    const { status, rejectionReason } = req.body;
 
     if (!["accepted", "rejected"].includes(status)) {
       return res
@@ -199,6 +223,13 @@ const respondToConnectionRequest = async (req, res) => {
         relatedType: "connection_request",
       });
     } else {
+      // Increment ticket for sender when request is rejected
+      // connectionRequest.senderId is already populated as User object
+      if (connectionRequest.senderId) {
+        connectionRequest.senderId.ticket += 1;
+        await connectionRequest.senderId.save();
+      }
+
       await createNotification({
         userId: connectionRequest.senderId,
         type: "request_rejected",

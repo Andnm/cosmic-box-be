@@ -18,6 +18,7 @@ const getUserProfile = async (req, res) => {
         phone: user.phone,
         roleName: user.roleName,
         membership: user.membership,
+        ticket: user.ticket || 0,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
